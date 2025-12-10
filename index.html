@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>MediaPipe 2段階ロード版</title>
+  <title>MediaPipe Solutions 版 Object Detection</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
@@ -11,7 +11,6 @@
       overflow: hidden;
       background: black;
     }
-
     #video {
       position: absolute;
       top: 0;
@@ -20,37 +19,29 @@
       height: 100vh;
       object-fit: cover;
       z-index: 1;
-      transform: translateZ(0);
     }
-
     #canvas {
       position: absolute;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      z-index: 9998;
+      z-index: 2;
       pointer-events: none;
-      will-change: transform;
-      transform: translateZ(0);
     }
-
-    .btn {
+    #startBtn {
       position: absolute;
+      top: 20px;
       left: 50%;
       transform: translateX(-50%);
+      z-index: 9999;
       padding: 18px 40px;
       font-size: 22px;
       background: #007bff;
       color: white;
       border: none;
       border-radius: 12px;
-      z-index: 9999;
     }
-
-    #loadBtn { top: 20px; }
-    #startBtn { top: 100px; display: none; }
-
     #labelBox {
       position: absolute;
       bottom: 20px;
@@ -64,17 +55,20 @@
       z-index: 9999;
     }
   </style>
+
+  <!-- MediaPipe Solutions (JS版、WASMなし) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/objectron/objectron.js"></script>
 </head>
 
 <body>
-  <button id="loadBtn" class="btn">MediaPipe 読み込み</button>
-  <button id="startBtn" class="btn">カメラ開始</button>
+
+  <button id="startBtn">カメラ開始</button>
 
   <video id="video" autoplay playsinline muted></video>
   <canvas id="canvas"></canvas>
-
   <div id="labelBox"></div>
 
-  <script type="module" src="main.js"></script>
+  <script src="main.js"></script>
+
 </body>
 </html>
