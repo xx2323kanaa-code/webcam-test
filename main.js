@@ -15,33 +15,46 @@ let detector = null;
 let running = false;
 
 // -----------------------------------------------------
-// Step1: MediaPipe を先に読み込む
+// Step1: MediaPipe を先に読み込む（最大3分リトライ）
 // -----------------------------------------------------
 loadBtn.addEventListener("click", async () => {
-  loadBtn.textContent = "読み込み中…";
+  loadBtn.disabled = true;
+  loadBtn.textContent = "MediaPipe 読み込み中…（最大3分）";
 
-  try {
-    const vision = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.5/wasm"
-    );
+  const startTime = Date.now();
+  const timeout = 3 * 60 * 1000; // ★ 3分
 
-    detector = await ObjectDetector.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath:
-          "https://cdn.jsdelivr.net/gh/azukiazusa/model-host/efficientdet_lite0_float32.tflite",
-      },
-      runningMode: "video",
-      scoreThreshold: 0.5,
-      maxResults: 3
-    });
+  while (!detector && Date.now() - startTime < timeout) {
+    try {
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.5/wasm"
+      );
 
-    loadBtn.style.display = "none";
-    startBtn.style.display = "block";
+      detector = await ObjectDetector.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath:
+            "https://cdn.jsdelivr.net/gh/azukiazusa/model-host/efficientdet_lite0_float32.tflite",
+        },
+        runningMode: "video",
+        scoreThreshold: 0.5,
+        maxResults: 3
+      });
 
-  } catch (err) {
-    alert("MediaPipe 読み込みエラー\n" + err);
-    loadBtn.textContent = "再読み込み";
+    } catch (err) {
+      // ロード失敗しても何もしない → 自動リトライ
+      await new Promise(r => setTimeout(r, 2000)); // ★ 2秒待って再試行
+    }
   }
+
+  if (!detector) {
+    loadBtn.textContent = "読み込み失敗（再試行）";
+    loadBtn.disabled = false;
+    return;
+  }
+
+  // ★ 成功したら
+  loadBtn.style.display = "none";
+  startBtn.style.display = "block";
 });
 
 // -----------------------------------------------------
@@ -79,6 +92,9 @@ function resizeCanvas() {
   canvas.height = video.videoHeight;
 }
 
+// -----------------------------------------------------
+// Detection Loop
+// -----------------------------------------------------
 async function detectLoop() {
   if (!running) return;
 
