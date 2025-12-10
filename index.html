@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>スマホカメラ + Canvas</title>
+  <title>スマホ Canvas + Camera</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
@@ -12,6 +12,7 @@
       background: black;
     }
 
+    /* 背面に固定する video */
     #video {
       position: absolute;
       top: 0;
@@ -20,18 +21,23 @@
       height: 100vh;
       object-fit: cover;
       z-index: 1;
+      transform: translateZ(0);  /* GPUレイヤー化 */
     }
 
+    /* 最前面に強制的に描画する Canvas */
     #canvas {
       position: absolute;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      z-index: 2; /* ← videoより前面 */
-      pointer-events: none; /* ← タッチを邪魔しない */
+      z-index: 9998;               /* video より必ず前に出る */
+      pointer-events: none;
+      will-change: transform;      /* レイヤー分離（スマホ必須） */
+      transform: translateZ(0);    /* GPUレイヤー */
     }
 
+    /* スタートボタン（最前面） */
     #startBtn {
       position: absolute;
       top: 20px;
@@ -40,11 +46,10 @@
       padding: 20px 40px;
       font-size: 24px;
       background: #007bff;
+      color: white;
       border: none;
       border-radius: 10px;
-      color: white;
-      z-index: 9999;
-      touch-action: manipulation;
+      z-index: 9999;               /* 最前面 */
     }
   </style>
 </head>
