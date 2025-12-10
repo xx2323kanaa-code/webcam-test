@@ -11,6 +11,8 @@
       overflow: hidden;
       background: black;
     }
+
+    /* ★ videoはタッチ不可にしてボタン優先にする */
     #video {
       position: absolute;
       top: 0;
@@ -19,7 +21,10 @@
       height: 100vh;
       object-fit: cover;
       z-index: 1;
+      pointer-events: none;   /* ←スマホでタッチ吸われる問題を防ぐ */
     }
+
+    /* ★ canvasもタッチ不可にする */
     #canvas {
       position: absolute;
       top: 0;
@@ -29,6 +34,8 @@
       z-index: 2;
       pointer-events: none;
     }
+
+    /* ★ ボタンは最上位にして必ず押せるようにする */
     #startBtn {
       position: absolute;
       top: 20px;
@@ -42,6 +49,7 @@
       border: none;
       border-radius: 12px;
     }
+
     #labelBox {
       position: absolute;
       bottom: 20px;
@@ -56,9 +64,8 @@
     }
   </style>
 
-  <!-- 必ず最優先で読み込ませる（順序固定） -->
+  <!-- MediaPipe Solutions (JSベース、WASM不要) -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/objectron/objectron.js"></script>
-
 </head>
 
 <body>
@@ -69,28 +76,8 @@
   <canvas id="canvas"></canvas>
   <div id="labelBox"></div>
 
-  <!-- main.js は一番最後に読み込む -->
+  <!-- 必ず最後に main.js を読み込む -->
   <script src="main.js"></script>
-#video {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  z-index: 1;
-  pointer-events: none;   /* ←追加！ */
-}
-
-#canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 2;
-  pointer-events: none;   /* ←追加！ */
-}
 
 </body>
 </html>
