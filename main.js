@@ -8,34 +8,21 @@ btn.addEventListener("click", async () => {
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" },
+      video: { facingMode: "user" },  // 前面カメラ固定
       audio: false
     });
 
     video.srcObject = stream;
-
     await video.play();
 
-    // ★★★ ここが重要：サイズが取れるまで待つ ★★★
-    function waitForSize() {
-      return new Promise((resolve) => {
-        const check = () => {
-          if (video.videoWidth > 0 && video.videoHeight > 0) {
-            resolve();
-          } else {
-            requestAnimationFrame(check);
-          }
-        };
-        check();
-      });
-    }
+    // ★ video のサイズが取れるまで待つ
+    await waitForVideoSize();
 
-    await waitForSize();
+    // ★ Canvas を video と完全に一致させる
+    resizeCanvas();
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    drawTestBox();
+    // ★ 四角を描くだけのテスト
+    drawYellowBox();
 
   } catch (err) {
     alert("カメラエラー: " + err);
@@ -43,7 +30,25 @@ btn.addEventListener("click", async () => {
 });
 
 
-function drawTestBox() {
+function waitForVideoSize() {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        resolve();
+      } else {
+        requestAnimationFrame(check);
+      }
+    };
+    check();
+  });
+}
+
+function resizeCanvas() {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+}
+
+function drawYellowBox() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   ctx.strokeStyle = "yellow";
@@ -56,5 +61,5 @@ function drawTestBox() {
 
   ctx.strokeRect(x, y, boxWidth, boxHeight);
 
-  requestAnimationFrame(drawTestBox);
+  requestAnimationFrame(drawYellowBox);
 }
