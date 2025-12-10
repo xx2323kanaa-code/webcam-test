@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>スマホ Canvas + Camera</title>
+  <title>MediaPipe ObjectDetector (スマホ用)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
@@ -12,7 +12,6 @@
       background: black;
     }
 
-    /* 背面に固定する video */
     #video {
       position: absolute;
       top: 0;
@@ -21,23 +20,21 @@
       height: 100vh;
       object-fit: cover;
       z-index: 1;
-      transform: translateZ(0);  /* GPUレイヤー化 */
+      transform: translateZ(0);
     }
 
-    /* 最前面に強制的に描画する Canvas */
     #canvas {
       position: absolute;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      z-index: 9998;               /* video より必ず前に出る */
+      z-index: 9998;
       pointer-events: none;
-      will-change: transform;      /* レイヤー分離（スマホ必須） */
-      transform: translateZ(0);    /* GPUレイヤー */
+      will-change: transform;
+      transform: translateZ(0);
     }
 
-    /* スタートボタン（最前面） */
     #startBtn {
       position: absolute;
       top: 20px;
@@ -49,7 +46,20 @@
       color: white;
       border: none;
       border-radius: 10px;
-      z-index: 9999;               /* 最前面 */
+      z-index: 9999;
+    }
+
+    #labelBox {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      border-radius: 10px;
+      font-size: 24px;
+      z-index: 9999;
     }
   </style>
 </head>
@@ -58,6 +68,7 @@
   <button id="startBtn">カメラ ON</button>
   <video id="video" autoplay playsinline muted></video>
   <canvas id="canvas"></canvas>
+  <div id="labelBox"></div>
 
   <script type="module" src="main.js"></script>
 </body>
