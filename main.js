@@ -7,6 +7,7 @@ let video = document.getElementById("video");
 let canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");
 let labelBox = document.getElementById("label");
+let startBtn = document.getElementById("startBtn");
 
 let detector;
 let running = false;
@@ -91,9 +92,12 @@ async function loop() {
   requestAnimationFrame(loop);
 }
 
-(async () => {
+async function startApp() {
+  startBtn.style.display = "none"; // ボタンを消す
   await initCamera();
   await initDetector();
   running = true;
   loop();
-})();
+}
+
+startBtn.addEventListener("click", startApp);
