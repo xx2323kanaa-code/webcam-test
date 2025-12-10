@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>MediaPipe Solutions 版 Object Detection</title>
+  <title>TF.js Object Detection</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
@@ -12,7 +12,6 @@
       background: black;
     }
 
-    /* ★ videoはタッチ不可にしてボタン優先にする */
     #video {
       position: absolute;
       top: 0;
@@ -20,52 +19,38 @@
       width: 100vw;
       height: 100vh;
       object-fit: cover;
+      pointer-events: none;
       z-index: 1;
-      pointer-events: none;   /* ←スマホでタッチ吸われる問題を防ぐ */
     }
 
-    /* ★ canvasもタッチ不可にする */
     #canvas {
       position: absolute;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      z-index: 2;
       pointer-events: none;
+      z-index: 2;
     }
 
-    /* ★ ボタンは最上位にして必ず押せるようにする */
     #startBtn {
       position: absolute;
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 9999;
       padding: 18px 40px;
       font-size: 22px;
       background: #007bff;
       color: white;
       border: none;
       border-radius: 12px;
-    }
-
-    #labelBox {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 10px 20px;
-      background: rgba(0,0,0,0.6);
-      color: white;
-      border-radius: 10px;
-      font-size: 24px;
       z-index: 9999;
     }
   </style>
 
-  <!-- MediaPipe Solutions (JSベース、WASM不要) -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/objectron/objectron.js"></script>
+  <!-- TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 </head>
 
 <body>
@@ -74,9 +59,7 @@
 
   <video id="video" autoplay playsinline muted></video>
   <canvas id="canvas"></canvas>
-  <div id="labelBox"></div>
 
-  <!-- 必ず最後に main.js を読み込む -->
   <script src="main.js"></script>
 
 </body>
