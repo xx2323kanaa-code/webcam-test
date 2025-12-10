@@ -1,65 +1,35 @@
-import {
-  ObjectDetector,
-  FilesetResolver
-} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.5";
-
-const loadBtn = document.getElementById("loadBtn");
 const startBtn = document.getElementById("startBtn");
-
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const labelBox = document.getElementById("labelBox");
 
 let detector = null;
-let running = false;
 
-// -----------------------------------------------------
-// Step1: MediaPipe を先に読み込む（最大3分リトライ）
-// -----------------------------------------------------
-loadBtn.addEventListener("click", async () => {
-  loadBtn.disabled = true;
-  loadBtn.textContent = "MediaPipe 読み込み中…（最大3分）";
+// -----------------------------------------------------------
+// MediaPipe Solutions 版 Object Detection
+// -----------------------------------------------------------
+async function initObjectron() {
+  return new Promise((resolve) => {
+    const objectron = new Objectron({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/objectron/${file}`
+    });
 
-  const startTime = Date.now();
-  const timeout = 3 * 60 * 1000; // ★ 3分
+    objectron.setOptions({
+      modelName: "Cup", // 軽量モデル（コップ）
+      maxNumObjects: 1,
+    });
 
-  while (!detector && Date.now() - startTime < timeout) {
-    try {
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.5/wasm"
-      );
+    objectron.onResults((results) => drawResults(results));
 
-      detector = await ObjectDetector.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath:
-            "https://cdn.jsdelivr.net/gh/azukiazusa/model-host/efficientdet_lite0_float32.tflite",
-        },
-        runningMode: "video",
-        scoreThreshold: 0.5,
-        maxResults: 3
-      });
+    resolve(objectron);
+  });
+}
 
-    } catch (err) {
-      // ロード失敗しても何もしない → 自動リトライ
-      await new Promise(r => setTimeout(r, 2000)); // ★ 2秒待って再試行
-    }
-  }
-
-  if (!detector) {
-    loadBtn.textContent = "読み込み失敗（再試行）";
-    loadBtn.disabled = false;
-    return;
-  }
-
-  // ★ 成功したら
-  loadBtn.style.display = "none";
-  startBtn.style.display = "block";
-});
-
-// -----------------------------------------------------
-// Step2: カメラ開始
-// -----------------------------------------------------
+// -----------------------------------------------------------
+// カメラ開始
+// -----------------------------------------------------------
 startBtn.addEventListener("click", async () => {
   startBtn.style.display = "none";
 
@@ -73,8 +43,8 @@ startBtn.addEventListener("click", async () => {
   await waitForSize();
   resizeCanvas();
 
-  running = true;
-  detectLoop();
+  detector = await initObjectron();
+  processVideoFrame();
 });
 
 function waitForSize() {
@@ -92,32 +62,39 @@ function resizeCanvas() {
   canvas.height = video.videoHeight;
 }
 
-// -----------------------------------------------------
-// Detection Loop
-// -----------------------------------------------------
-async function detectLoop() {
-  if (!running) return;
+// -----------------------------------------------------------
+// フレームごとに Objectron を適用
+// -----------------------------------------------------------
+async function processVideoFrame() {
+  await detector.send({ image: video });
+  requestAnimationFrame(processVideoFrame);
+}
 
+// -----------------------------------------------------------
+// 検出結果描画
+// -----------------------------------------------------------
+function drawResults(results) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (detector) {
-    const result = await detector.detectForVideo(video, performance.now());
+  if (!results || !results.objectDetections) return;
 
-    if (result.detections.length > 0) {
-      for (const det of result.detections) {
-        const b = det.boundingBox;
-        const name = det.categories[0].categoryName;
-
-        ctx.strokeStyle = "lime";
-        ctx.lineWidth = 4;
-        ctx.strokeRect(b.originX, b.originY, b.width, b.height);
-
-        labelBox.textContent = name;
-      }
-    } else {
-      labelBox.textContent = "";
-    }
+  const dets = results.objectDetections;
+  if (dets.length === 0) {
+    labelBox.textContent = "";
+    return;
   }
 
-  requestAnimationFrame(detectLoop);
+  const det = dets[0];
+  const box = det.locationData.relativeBoundingBox;
+
+  const x = box.xmin * canvas.width;
+  const y = box.ymin * canvas.height;
+  const w = box.width * canvas.width;
+  const h = box.height * canvas.height;
+
+  ctx.strokeStyle = "lime";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(x, y, w, h);
+
+  labelBox.textContent = "cup（コップ判定モデル）";
 }
