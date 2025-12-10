@@ -12,42 +12,41 @@ const labelBox = document.getElementById("labelBox");
 let detector;
 let running = false;
 
-// ------------------------------
-// カメラ開始
-// ------------------------------
+// ------------------------------------------
+// カメラスタート
+// ------------------------------------------
 btn.addEventListener("click", async () => {
   btn.style.display = "none";
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" },  // スマホ前面カメラ固定
+      video: { facingMode: "user" }, // 前面カメラ
       audio: false
     });
 
     video.srcObject = stream;
     await video.play();
 
-    await waitForVideoSize();
+    await waitForSize();
     resizeCanvas();
 
-    await initDetector();   // ← MediaPipe 初期化
+    await initDetector();  // ★ MediaPipe 初期化
     running = true;
-    detectLoop();
+    detectLoop();          // ★ MediaPipe で検出開始
 
   } catch (err) {
-    alert("カメラエラー: " + err);
+    alert("カメラエラー:" + err);
   }
 });
 
+// ------------------------------------------
 // video のサイズが取れるまで待つ
-function waitForVideoSize() {
+// ------------------------------------------
+function waitForSize() {
   return new Promise((resolve) => {
     const check = () => {
-      if (video.videoWidth > 0 && video.videoHeight > 0) {
-        resolve();
-      } else {
-        requestAnimationFrame(check);
-      }
+      if (video.videoWidth > 0) resolve();
+      else requestAnimationFrame(check);
     };
     check();
   });
@@ -58,9 +57,9 @@ function resizeCanvas() {
   canvas.height = video.videoHeight;
 }
 
-// ------------------------------
-// MediaPipe Detector 初期化
-// ------------------------------
+// ------------------------------------------
+// MediaPipe 初期化
+// ------------------------------------------
 async function initDetector() {
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.5/wasm"
@@ -76,27 +75,30 @@ async function initDetector() {
   });
 }
 
-// ------------------------------
-// メインループ：物体検出
-// ------------------------------
+// ------------------------------------------
+// 検出ループ
+// ------------------------------------------
 async function detectLoop() {
   if (!running) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   const result = await detector.detectForVideo(video, performance.now());
 
   if (result.detections.length > 0) {
-    const det = result.detections[0];
-    const b = det.boundingBox;
-    const name = det.categories[0].categoryName;
 
-    ctx.strokeStyle = "yellow";
-    ctx.lineWidth = 6;
-    ctx.strokeRect(b.originX, b.originY, b.width, b.height);
+    for (const det of result.detections) {
+      const b = det.boundingBox;
+      const name = det.categories[0].categoryName;
 
-    labelBox.textContent = name;
+      // ★★ MediaPipe の枠 ★★
+      ctx.strokeStyle = "lime";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(b.originX, b.originY, b.width, b.height);
+
+      labelBox.textContent = name;
+    }
+
   } else {
     labelBox.textContent = "";
   }
