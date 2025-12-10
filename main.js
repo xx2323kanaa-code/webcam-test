@@ -17,10 +17,18 @@ async function initCamera() {
     video: { facingMode: "environment" },
     audio: false
   });
+
   video.srcObject = stream;
 
+  // スマホでは明示しないと再生が開始しない
+  await video.play();
+
   return new Promise((resolve) => {
-    video.onloadedmetadata = () => resolve();
+    if (video.readyState >= 2) {
+      resolve();
+    } else {
+      video.onloadeddata = () => resolve();
+    }
   });
 }
 
@@ -53,7 +61,7 @@ function getCenterTarget(detections) {
     const bx = b.originX + b.width / 2;
     const by = b.originY + b.height / 2;
 
-    const d = (bx - cx)**2 + (by - cy)**2;
+    const d = (bx - cx) ** 2 + (by - cy) ** 2;
     if (d < bestDist) {
       best = det;
       bestDist = d;
@@ -65,6 +73,12 @@ function getCenterTarget(detections) {
 
 async function loop() {
   if (!running) return;
+
+  // videoWidth が 0 の場合は待つ（スマホで起きる）
+  if (video.videoWidth === 0 || video.videoHeight === 0) {
+    requestAnimationFrame(loop);
+    return;
+  }
 
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
@@ -93,11 +107,13 @@ async function loop() {
 }
 
 async function startApp() {
-  startBtn.style.display = "none"; // ボタンを消す
+  startBtn.style.display = "none"; 
+
   await initCamera();
   await initDetector();
+
   running = true;
   loop();
 }
 
-startBtn.addEventListener("click", startApp);
+startBtn.onclick = startApp;
