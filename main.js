@@ -19,9 +19,10 @@ async function initCamera() {
   });
 
   video.srcObject = stream;
+  video.muted = true;     // ← Android Chrome 対策
+  video.playsinline = true;
 
-  // スマホでは明示しないと再生が開始しない
-  await video.play();
+  await video.play();      // ← これが成功するようになる
 
   return new Promise((resolve) => {
     if (video.readyState >= 2) {
@@ -31,6 +32,7 @@ async function initCamera() {
     }
   });
 }
+
 
 async function initDetector() {
   const vision = await FilesetResolver.forVisionTasks(
