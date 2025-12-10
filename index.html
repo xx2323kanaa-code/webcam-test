@@ -1,23 +1,64 @@
 <!DOCTYPE html>
-<html>
-  <body style="margin:0; background:black;">
-    <h2 style="color:white; position:absolute; z-index:10;">Mac カメラテスト</h2>
-    <video id="video" autoplay playsinline style="width:100vw; height:100vh; object-fit:cover;"></video>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>スマホカメラテスト</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <script>
-      async function startCamera() {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: false
-          });
-          document.getElementById("video").srcObject = stream;
-        } catch (e) {
-          alert("カメラエラー: " + e.message);
-          console.error(e);
-        }
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+    }
+
+    #video {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+    }
+
+    #startBtn {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 20px 40px;
+      font-size: 24px;
+      background: #007bff;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      z-index: 9999;
+      touch-action: manipulation; /* スマホ向け */
+    }
+  </style>
+</head>
+
+<body>
+
+  <button id="startBtn">カメラON</button>
+  <video id="video" autoplay playsinline muted></video>
+
+  <script>
+    const btn = document.getElementById("startBtn");
+    const video = document.getElementById("video");
+
+    btn.addEventListener("click", async () => {
+      btn.style.display = "none";
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" }, // ★ 前面カメラ固定！
+          audio: false
+        });
+
+        video.srcObject = stream;
+
+      } catch (err) {
+        alert("カメラエラー: " + err);
       }
-      startCamera();
-    </script>
-  </body>
+    });
+  </script>
+</body>
 </html>
