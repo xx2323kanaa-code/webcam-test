@@ -1,36 +1,56 @@
-body, html {
+/* 画面全体の基本設定 */
+html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
   background: #000;
+  height: 100%;
 }
 
+/* すべての要素をまとめるコンテナ */
 #container {
   position: relative;
   width: 100vw;
   height: 100vh;
+  overflow: hidden;
 }
 
-#video, #canvas {
+/* カメラ映像（video） */
+#video {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  z-index: 1;   /* ← ボタンより下にするための指定 */
 }
 
+/* 描画用キャンバス */
+#canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 2;   /* video より上、ボタンより下 */
+}
+
+/* ラベル（検出結果の文字） */
 #label {
   position: absolute;
   top: 20px;
   left: 20px;
   padding: 8px 14px;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   color: #fff;
   font-size: 20px;
   border-radius: 8px;
+  z-index: 3;   /* ラベルは前面でOK */
 }
 
+/* スタートボタン（最優先で押せるように最前面） */
 #startBtn {
   position: absolute;
   bottom: 30px;
@@ -43,7 +63,7 @@ body, html {
   background: #28a745;
   color: white;
   cursor: pointer;
-  z-index: 10;
+  z-index: 9999;   /* ← “絶対に” video の上に表示させるための最前面 */
 }
 
 #startBtn:hover {
