@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>Available Cameras</h2>
+  <ul id="list"></ul>
+
+  <script>
+    async function test() {
+      const listEl = document.getElementById("list");
+
+      // カメラ権限を取得
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+      } catch (e) {
+        const item = document.createElement("li");
+        item.textContent = "getUserMedia error: " + e.message;
+        listEl.appendChild(item);
+        return;
+      }
+
+      // カメラ一覧を取得
+      const devices = await navigator.mediaDevices.enumerateDevices();
+
+      devices.forEach(d => {
+        const item = document.createElement("li");
+        item.textContent = `${d.kind} : ${d.label} : ${d.deviceId}`;
+        listEl.appendChild(item);
+      });
+    }
+    test();
+  </script>
+</body>
+</html>
