@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>MediaPipe ObjectDetector (スマホ用)</title>
+  <title>MediaPipe 2段階ロード版</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
@@ -35,19 +35,21 @@
       transform: translateZ(0);
     }
 
-    #startBtn {
+    .btn {
       position: absolute;
-      top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      padding: 20px 40px;
-      font-size: 24px;
+      padding: 18px 40px;
+      font-size: 22px;
       background: #007bff;
       color: white;
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
       z-index: 9999;
     }
+
+    #loadBtn { top: 20px; }
+    #startBtn { top: 100px; display: none; }
 
     #labelBox {
       position: absolute;
@@ -65,9 +67,12 @@
 </head>
 
 <body>
-  <button id="startBtn">カメラ ON</button>
+  <button id="loadBtn" class="btn">MediaPipe 読み込み</button>
+  <button id="startBtn" class="btn">カメラ開始</button>
+
   <video id="video" autoplay playsinline muted></video>
   <canvas id="canvas"></canvas>
+
   <div id="labelBox"></div>
 
   <script type="module" src="main.js"></script>
