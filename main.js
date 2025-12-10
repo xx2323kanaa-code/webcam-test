@@ -12,36 +12,25 @@ const labelBox = document.getElementById("labelBox");
 let detector;
 let running = false;
 
-// ------------------------------------------
-// カメラスタート
-// ------------------------------------------
 btn.addEventListener("click", async () => {
   btn.style.display = "none";
 
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" }, // 前面カメラ
-      audio: false
-    });
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "user" },
+    audio: false
+  });
+  video.srcObject = stream;
+  await video.play();
 
-    video.srcObject = stream;
-    await video.play();
+  await waitForSize();
+  resizeCanvas();
 
-    await waitForSize();
-    resizeCanvas();
+  await initDetector_light();   // ★ 軽量モデルを使う
+  running = true;
 
-    await initDetector();  // ★ MediaPipe 初期化
-    running = true;
-    detectLoop();          // ★ MediaPipe で検出開始
-
-  } catch (err) {
-    alert("カメラエラー:" + err);
-  }
+  detectLoop();
 });
 
-// ------------------------------------------
-// video のサイズが取れるまで待つ
-// ------------------------------------------
 function waitForSize() {
   return new Promise((resolve) => {
     const check = () => {
@@ -57,10 +46,10 @@ function resizeCanvas() {
   canvas.height = video.videoHeight;
 }
 
-// ------------------------------------------
-// MediaPipe 初期化
-// ------------------------------------------
-async function initDetector() {
+// ------------------------------------------------------
+// ★ 軽量モデル EfficientDet-lite0 FLOAT32 版
+// ------------------------------------------------------
+async function initDetector_light() {
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.5/wasm"
   );
@@ -68,16 +57,17 @@ async function initDetector() {
   detector = await ObjectDetector.createFromOptions(vision, {
     baseOptions: {
       modelAssetPath:
-        "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/object_detector.tflite",
+        "https://cdn.jsdelivr.net/gh/azukiazusa/model-host/efficientdet_lite0_float32.tflite",
     },
     runningMode: "video",
+    maxResults: 3,
     scoreThreshold: 0.5
   });
 }
 
-// ------------------------------------------
-// 検出ループ
-// ------------------------------------------
+// ------------------------------------------------------
+// Detection Loop
+// ------------------------------------------------------
 async function detectLoop() {
   if (!running) return;
 
@@ -86,19 +76,16 @@ async function detectLoop() {
   const result = await detector.detectForVideo(video, performance.now());
 
   if (result.detections.length > 0) {
-
     for (const det of result.detections) {
       const b = det.boundingBox;
       const name = det.categories[0].categoryName;
 
-      // ★★ MediaPipe の枠 ★★
       ctx.strokeStyle = "lime";
       ctx.lineWidth = 4;
       ctx.strokeRect(b.originX, b.originY, b.width, b.height);
 
       labelBox.textContent = name;
     }
-
   } else {
     labelBox.textContent = "";
   }
