@@ -8,7 +8,7 @@ btn.addEventListener("click", async () => {
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" }, 
+      video: { facingMode: "user" },
       audio: false
     });
 
@@ -16,26 +16,36 @@ btn.addEventListener("click", async () => {
 
     await video.play();
 
-    // Canvas のサイズを video に合わせる
-    function resize() {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+    // ★★★ ここが重要：サイズが取れるまで待つ ★★★
+    function waitForSize() {
+      return new Promise((resolve) => {
+        const check = () => {
+          if (video.videoWidth > 0 && video.videoHeight > 0) {
+            resolve();
+          } else {
+            requestAnimationFrame(check);
+          }
+        };
+        check();
+      });
     }
 
-    video.addEventListener("loadedmetadata", resize);
-    window.addEventListener("resize", resize);
+    await waitForSize();
 
-    drawTestBox(); // ★ 次へ
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    drawTestBox();
 
   } catch (err) {
     alert("カメラエラー: " + err);
   }
 });
 
+
 function drawTestBox() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 画面中央にテスト用の黄色い四角
   ctx.strokeStyle = "yellow";
   ctx.lineWidth = 6;
 
@@ -48,4 +58,3 @@ function drawTestBox() {
 
   requestAnimationFrame(drawTestBox);
 }
-
