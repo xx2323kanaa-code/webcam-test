@@ -30,7 +30,8 @@ async function initDetector() {
 
   detector = await ObjectDetector.createFromOptions(vision, {
     baseOptions: {
-      modelAssetPath: "models/object_detector.tflite"
+      modelAssetPath:
+        "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/object_detector.tflite"
     },
     scoreThreshold: 0.5,
     runningMode: "video"
