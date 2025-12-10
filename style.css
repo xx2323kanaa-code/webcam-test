@@ -31,3 +31,21 @@ body, html {
   border-radius: 8px;
 }
 
+#startBtn {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 15px 25px;
+  font-size: 20px;
+  border-radius: 10px;
+  border: none;
+  background: #28a745;
+  color: white;
+  cursor: pointer;
+  z-index: 10;
+}
+
+#startBtn:hover {
+  background: #218838;
+}
