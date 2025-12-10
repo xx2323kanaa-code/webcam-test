@@ -1,30 +1,51 @@
-let video = document.getElementById("video");
-let canvas = document.getElementById("canvas");
-let ctx = canvas.getContext("2d");
-let startBtn = document.getElementById("startBtn");
+const btn = document.getElementById("startBtn");
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-async function initCamera() {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: true,
-    audio: false
-  });
-  video.srcObject = stream;
-  video.muted = true;
-  video.playsinline = true;
-  await video.play();
-}
+btn.addEventListener("click", async () => {
+  btn.style.display = "none";
 
-function drawLoop() {
-  if (video.videoWidth > 0) {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" }, 
+      audio: false
+    });
+
+    video.srcObject = stream;
+
+    await video.play();
+
+    // Canvas のサイズを video に合わせる
+    function resize() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+
+    video.addEventListener("loadedmetadata", resize);
+    window.addEventListener("resize", resize);
+
+    drawTestBox(); // ★ 次へ
+
+  } catch (err) {
+    alert("カメラエラー: " + err);
   }
-  requestAnimationFrame(drawLoop);
+});
+
+function drawTestBox() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 画面中央にテスト用の黄色い四角
+  ctx.strokeStyle = "yellow";
+  ctx.lineWidth = 6;
+
+  const boxWidth = canvas.width * 0.4;
+  const boxHeight = canvas.height * 0.4;
+  const x = (canvas.width - boxWidth) / 2;
+  const y = (canvas.height - boxHeight) / 2;
+
+  ctx.strokeRect(x, y, boxWidth, boxHeight);
+
+  requestAnimationFrame(drawTestBox);
 }
 
-startBtn.onclick = async () => {
-  startBtn.style.display = "none";
-  await initCamera();
-  drawLoop();
-};
