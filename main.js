@@ -3,17 +3,52 @@ import {
   FilesetResolver
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.5";
 
-const btn = document.getElementById("startBtn");
+const loadBtn = document.getElementById("loadBtn");
+const startBtn = document.getElementById("startBtn");
+
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const labelBox = document.getElementById("labelBox");
 
-let detector;
+let detector = null;
 let running = false;
 
-btn.addEventListener("click", async () => {
-  btn.style.display = "none";
+// -----------------------------------------------------
+// Step1: MediaPipe を先に読み込む
+// -----------------------------------------------------
+loadBtn.addEventListener("click", async () => {
+  loadBtn.textContent = "読み込み中…";
+
+  try {
+    const vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.5/wasm"
+    );
+
+    detector = await ObjectDetector.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath:
+          "https://cdn.jsdelivr.net/gh/azukiazusa/model-host/efficientdet_lite0_float32.tflite",
+      },
+      runningMode: "video",
+      scoreThreshold: 0.5,
+      maxResults: 3
+    });
+
+    loadBtn.style.display = "none";
+    startBtn.style.display = "block";
+
+  } catch (err) {
+    alert("MediaPipe 読み込みエラー\n" + err);
+    loadBtn.textContent = "再読み込み";
+  }
+});
+
+// -----------------------------------------------------
+// Step2: カメラ開始
+// -----------------------------------------------------
+startBtn.addEventListener("click", async () => {
+  startBtn.style.display = "none";
 
   const stream = await navigator.mediaDevices.getUserMedia({
     video: { facingMode: "user" },
@@ -25,9 +60,7 @@ btn.addEventListener("click", async () => {
   await waitForSize();
   resizeCanvas();
 
-  await initDetector_light();   // ★ 軽量モデルを使う
   running = true;
-
   detectLoop();
 });
 
@@ -46,48 +79,28 @@ function resizeCanvas() {
   canvas.height = video.videoHeight;
 }
 
-// ------------------------------------------------------
-// ★ 軽量モデル EfficientDet-lite0 FLOAT32 版
-// ------------------------------------------------------
-async function initDetector_light() {
-  const vision = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.5/wasm"
-  );
-
-  detector = await ObjectDetector.createFromOptions(vision, {
-    baseOptions: {
-      modelAssetPath:
-        "https://cdn.jsdelivr.net/gh/azukiazusa/model-host/efficientdet_lite0_float32.tflite",
-    },
-    runningMode: "video",
-    maxResults: 3,
-    scoreThreshold: 0.5
-  });
-}
-
-// ------------------------------------------------------
-// Detection Loop
-// ------------------------------------------------------
 async function detectLoop() {
   if (!running) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const result = await detector.detectForVideo(video, performance.now());
+  if (detector) {
+    const result = await detector.detectForVideo(video, performance.now());
 
-  if (result.detections.length > 0) {
-    for (const det of result.detections) {
-      const b = det.boundingBox;
-      const name = det.categories[0].categoryName;
+    if (result.detections.length > 0) {
+      for (const det of result.detections) {
+        const b = det.boundingBox;
+        const name = det.categories[0].categoryName;
 
-      ctx.strokeStyle = "lime";
-      ctx.lineWidth = 4;
-      ctx.strokeRect(b.originX, b.originY, b.width, b.height);
+        ctx.strokeStyle = "lime";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(b.originX, b.originY, b.width, b.height);
 
-      labelBox.textContent = name;
+        labelBox.textContent = name;
+      }
+    } else {
+      labelBox.textContent = "";
     }
-  } else {
-    labelBox.textContent = "";
   }
 
   requestAnimationFrame(detectLoop);
