@@ -12,14 +12,11 @@ let startBtn = document.getElementById("startBtn");
 let detector;
 let running = false;
 
-// ※ここに背面カメラの deviceId を設定（今回の先生の端末）
-const BACK_CAMERA_ID = "0aff40d1ef873ae19b6380fed4d263cf5941a1d624f79d45d31d3fdffcd6bd97";
-
 async function initCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        deviceId: BACK_CAMERA_ID,   // ← 背面カメラを強制指定
+        facingMode: "user",   // ★ 前面カメラ固定（今回の核心）
         width: { ideal: 1280 },
         height: { ideal: 720 }
       },
