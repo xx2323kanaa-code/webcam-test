@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>スマホカメラテスト</title>
+  <title>スマホカメラ + Canvas</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
@@ -12,7 +12,6 @@
       background: black;
     }
 
-    /* ★ video を絶対配置にして後ろへ回す */
     #video {
       position: absolute;
       top: 0;
@@ -20,10 +19,19 @@
       width: 100vw;
       height: 100vh;
       object-fit: cover;
-      z-index: 1; /* ← 背面に固定 */
+      z-index: 1;
     }
 
-    /* ★ ボタンを最前面に出す */
+    #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 2; /* ← videoより前面 */
+      pointer-events: none; /* ← タッチを邪魔しない */
+    }
+
     #startBtn {
       position: absolute;
       top: 20px;
@@ -35,33 +43,17 @@
       border: none;
       border-radius: 10px;
       color: white;
-      z-index: 9999; /* ← 絶対に最前面に表示 */
+      z-index: 9999;
       touch-action: manipulation;
     }
   </style>
 </head>
 
 <body>
-
   <button id="startBtn">カメラ ON</button>
   <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas"></canvas>
 
-  <script>
-    const btn = document.getElementById("startBtn");
-    const video = document.getElementById("video");
-
-    btn.addEventListener("click", async () => {
-      btn.style.display = "none"; // 押した後は消す
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" }, // ★ 前面カメラ固定！
-          audio: false
-        });
-        video.srcObject = stream;
-      } catch (err) {
-        alert("カメラエラー: " + err);
-      }
-    });
-  </script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>
