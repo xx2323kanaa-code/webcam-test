@@ -1,35 +1,45 @@
+import {
+  ObjectDetector,
+  FilesetResolver
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.5";
+
 const btn = document.getElementById("startBtn");
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const labelBox = document.getElementById("labelBox");
 
+let detector;
+let running = false;
+
+// ------------------------------
+// カメラ開始
+// ------------------------------
 btn.addEventListener("click", async () => {
   btn.style.display = "none";
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" },  // 前面カメラ固定
+      video: { facingMode: "user" },  // スマホ前面カメラ固定
       audio: false
     });
 
     video.srcObject = stream;
     await video.play();
 
-    // ★ video のサイズが取れるまで待つ
     await waitForVideoSize();
-
-    // ★ Canvas を video と完全に一致させる
     resizeCanvas();
 
-    // ★ 四角を描くだけのテスト
-    drawYellowBox();
+    await initDetector();   // ← MediaPipe 初期化
+    running = true;
+    detectLoop();
 
   } catch (err) {
     alert("カメラエラー: " + err);
   }
 });
 
-
+// video のサイズが取れるまで待つ
 function waitForVideoSize() {
   return new Promise((resolve) => {
     const check = () => {
@@ -48,18 +58,48 @@ function resizeCanvas() {
   canvas.height = video.videoHeight;
 }
 
-function drawYellowBox() {
+// ------------------------------
+// MediaPipe Detector 初期化
+// ------------------------------
+async function initDetector() {
+  const vision = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.5/wasm"
+  );
+
+  detector = await ObjectDetector.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath:
+        "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/object_detector.tflite",
+    },
+    runningMode: "video",
+    scoreThreshold: 0.5
+  });
+}
+
+// ------------------------------
+// メインループ：物体検出
+// ------------------------------
+async function detectLoop() {
+  if (!running) return;
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  ctx.strokeStyle = "yellow";
-  ctx.lineWidth = 6;
+  const result = await detector.detectForVideo(video, performance.now());
 
-  const boxWidth = canvas.width * 0.4;
-  const boxHeight = canvas.height * 0.4;
-  const x = (canvas.width - boxWidth) / 2;
-  const y = (canvas.height - boxHeight) / 2;
+  if (result.detections.length > 0) {
+    const det = result.detections[0];
+    const b = det.boundingBox;
+    const name = det.categories[0].categoryName;
 
-  ctx.strokeRect(x, y, boxWidth, boxHeight);
+    ctx.strokeStyle = "yellow";
+    ctx.lineWidth = 6;
+    ctx.strokeRect(b.originX, b.originY, b.width, b.height);
 
-  requestAnimationFrame(drawYellowBox);
+    labelBox.textContent = name;
+  } else {
+    labelBox.textContent = "";
+  }
+
+  requestAnimationFrame(detectLoop);
 }
