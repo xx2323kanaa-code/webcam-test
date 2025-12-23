@@ -1,66 +1,153 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>TF.js Object Detection</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>FOOTSTEP-ALT OBSERVER</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: black;
-    }
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
-    #video {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      pointer-events: none;
-      z-index: 1;
-    }
+<style>
+html,body{margin:0;padding:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;}
+video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;}
 
-    #canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      pointer-events: none;
-      z-index: 2;
-    }
+#topBar{
+  position:fixed;top:0;left:0;right:0;
+  background:rgba(0,0,0,.8);padding:6px;text-align:center;
+}
 
-    #startBtn {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 18px 40px;
-      font-size: 22px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 12px;
-      z-index: 9999;
-    }
-  </style>
+#panel{
+  position:fixed;bottom:0;left:0;right:0;
+  background:rgba(0,0,0,.85);padding:8px;
+}
 
-  <!-- TensorFlow.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+#hudBox{display:none;margin-top:6px;}
+textarea{
+  width:100%;height:140px;
+  background:#111;color:#0f0;font-size:11px;
+}
+button{margin:2px;font-size:14px;}
+</style>
 </head>
 
 <body>
 
-  <button id="startBtn">カメラ開始</button>
+<div id="topBar">
+  <b>FOOTSTEP-ALT</b> OBSERVER MODE
+</div>
 
-  <video id="video" autoplay playsinline muted></video>
-  <canvas id="canvas"></canvas>
+<video id="video" playsinline muted></video>
 
-  <script src="main.js"></script>
+<div id="panel">
+  <button id="startBtn">▶ 開始</button>
+  <select id="cameraSel">
+    <option value="environment">背面</option>
+    <option value="user">前面</option>
+  </select>
+  <button id="hudBtn">HUD</button>
+
+  <div id="hudBox">
+    <textarea id="hudLog" readonly></textarea><br>
+    <button id="copyBtn">コピー</button>
+    <button id="logToggleBtn">ログ停止</button>
+  </div>
+</div>
+
+<script>
+/* ===== DOM ===== */
+const video = document.getElementById("video");
+const startBtn = document.getElementById("startBtn");
+const cameraSel = document.getElementById("cameraSel");
+const hudBtn = document.getElementById("hudBtn");
+const hudBox = document.getElementById("hudBox");
+const hudLog = document.getElementById("hudLog");
+const copyBtn = document.getElementById("copyBtn");
+const logToggleBtn = document.getElementById("logToggleBtn");
+
+/* ===== 状態 ===== */
+let model, stream=null;
+let intervalId=null;
+let running=false;
+
+let lastFootY=null;
+let lastTime=null;
+
+/* ===== HUDログ ===== */
+let hudBuffer=[];
+const MAX_LOG=50;
+let logEnabled=true;
+
+/* ===== カメラ ===== */
+async function start(){
+  stream = await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:cameraSel.value}
+  });
+  video.srcObject = stream;
+  await video.play();
+
+  model = await cocoSsd.load();
+  running=true;
+  startBtn.textContent="■ 停止";
+
+  intervalId = setInterval(observe, 800); // ★0.8秒固定
+}
+
+function stop(){
+  running=false;
+  if(intervalId){ clearInterval(intervalId); intervalId=null; }
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  startBtn.textContent="▶ 開始";
+}
+
+/* ===== 観測 ===== */
+async function observe(){
+  if(!running) return;
+
+  const preds = await model.detect(video);
+  if(preds.length===0) return;
+
+  const target =
+    preds.find(p=>p.class==="person") ||
+    preds.slice().sort((a,b)=>(b.bbox[2]*b.bbox[3])-(a.bbox[2]*a.bbox[3]))[0];
+
+  const footY = Math.round(target.bbox[1] + target.bbox[3]);
+  const now = performance.now();
+
+  if(lastFootY!==null){
+    const dY = footY - lastFootY;
+    const sign = dY>0 ? "+" : dY<0 ? "-" : "0";
+    const t = lastTime ? ((now-lastTime)/1000).toFixed(1) : "-";
+
+    const line = `t:${t}s  footY:${footY}  dY:${dY}  sign:${sign}`;
+
+    if(logEnabled){
+      hudBuffer.push(line);
+      if(hudBuffer.length>MAX_LOG) hudBuffer.shift();
+      hudLog.value = hudBuffer.join("\n");
+    }
+  }
+
+  lastFootY = footY;
+  lastTime = now;
+}
+
+/* ===== UI ===== */
+startBtn.onclick=()=>{running?stop():start();};
+
+hudBtn.onclick=()=>{
+  hudBox.style.display = hudBox.style.display==="none" ? "block" : "none";
+};
+
+copyBtn.onclick=()=>{
+  navigator.clipboard.writeText(hudLog.value);
+};
+
+logToggleBtn.onclick=()=>{
+  logEnabled = !logEnabled;
+  logToggleBtn.textContent = logEnabled ? "ログ停止" : "ログ再開";
+};
+</script>
 
 </body>
 </html>
