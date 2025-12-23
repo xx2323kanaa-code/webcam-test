@@ -2,39 +2,53 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>FOOTSTEP-ALT OBSERVER</title>
+<title>FOOTSTEP-ALT : Human-in-the-loop Ankle Exercise Observer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
 <style>
-html,body{margin:0;padding:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;}
-video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;}
-
+html,body{
+  margin:0;padding:0;overflow:hidden;
+  background:#fff;color:#000;
+  font-family:system-ui,sans-serif;
+}
+video{
+  position:absolute;top:0;left:0;
+  width:100%;height:100%;
+  object-fit:cover;
+}
 #topBar{
   position:fixed;top:0;left:0;right:0;
-  background:rgba(0,0,0,.8);padding:6px;text-align:center;
+  background:#fff;border-bottom:1px solid #000;
+  padding:6px;text-align:center;
+  z-index:2;
 }
-
 #panel{
   position:fixed;bottom:0;left:0;right:0;
-  background:rgba(0,0,0,.85);padding:8px;
+  background:#fff;border-top:1px solid #000;
+  padding:8px;z-index:2;
 }
-
 #hudBox{display:none;margin-top:6px;}
 textarea{
   width:100%;height:140px;
-  background:#111;color:#0f0;font-size:11px;
+  background:#fff;color:#000;
+  border:1px solid #000;
+  font-size:11px;
 }
-button{margin:2px;font-size:14px;}
+button,select{
+  font-size:14px;margin:2px;
+}
+#countNow{font-size:18px;font-weight:bold;}
 </style>
 </head>
 
 <body>
 
 <div id="topBar">
-  <b>FOOTSTEP-ALT</b> OBSERVER MODE
+  <b>FOOTSTEP-ALT</b><br>
+  <small>Human-in-the-loop ankle dorsiflexion / plantarflexion observer</small>
 </div>
 
 <video id="video" playsinline muted></video>
@@ -47,10 +61,16 @@ button{margin:2px;font-size:14px;}
   </select>
   <button id="hudBtn">HUD</button>
 
+  <div>
+    実施中カウント：<span id="countNow">0</span>
+  </div>
+
   <div id="hudBox">
     <textarea id="hudLog" readonly></textarea><br>
-    <button id="copyBtn">コピー</button>
+    <button id="copyBtn">ログコピー</button>
     <button id="logToggleBtn">ログ停止</button>
+    <button id="csvBtn">CSV出力</button>
+    <div id="dailyTotal"></div>
   </div>
 </div>
 
@@ -64,19 +84,23 @@ const hudBox = document.getElementById("hudBox");
 const hudLog = document.getElementById("hudLog");
 const copyBtn = document.getElementById("copyBtn");
 const logToggleBtn = document.getElementById("logToggleBtn");
+const csvBtn = document.getElementById("csvBtn");
+const countNowSpan = document.getElementById("countNow");
+const dailyTotalDiv = document.getElementById("dailyTotal");
 
 /* ===== 状態 ===== */
-let model, stream=null;
-let intervalId=null;
-let running=false;
+let model, stream=null, intervalId=null, running=false;
+let lastFootY=null, lastTime=null;
+let lastEventTime=null, lastEventSign=null;
 
-let lastFootY=null;
-let lastTime=null;
+let sessionCount=0;
 
-/* ===== HUDログ ===== */
+/* HUDログ */
 let hudBuffer=[];
-const MAX_LOG=50;
+const MAX_LOG=60;
 let logEnabled=true;
+
+const STORAGE_KEY="FOOTSTEP_ALT_DAILY";
 
 /* ===== カメラ ===== */
 async function start(){
@@ -89,18 +113,22 @@ async function start(){
   model = await cocoSsd.load();
   running=true;
   startBtn.textContent="■ 停止";
+  sessionCount=0;
+  countNowSpan.textContent="0";
 
-  intervalId = setInterval(observe, 800); // ★0.8秒固定
+  intervalId = setInterval(observe, 800);
 }
 
 function stop(){
   running=false;
-  if(intervalId){ clearInterval(intervalId); intervalId=null; }
-  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  if(intervalId){clearInterval(intervalId);intervalId=null;}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
   startBtn.textContent="▶ 開始";
+  saveDaily(sessionCount);
+  showDaily();
 }
 
-/* ===== 観測 ===== */
+/* ===== 観測＋交互カウント ===== */
 async function observe(){
   if(!running) return;
 
@@ -116,37 +144,74 @@ async function observe(){
 
   if(lastFootY!==null){
     const dY = footY - lastFootY;
-    const sign = dY>0 ? "+" : dY<0 ? "-" : "0";
-    const t = lastTime ? ((now-lastTime)/1000).toFixed(1) : "-";
+    const sign = dY>0?"+":dY<0?"-":"0";
+    const dt = lastTime?((now-lastTime)/1000).toFixed(1):"-";
+    let mark="";
 
-    const line = `t:${t}s  footY:${footY}  dY:${dY}  sign:${sign}`;
+    if(Math.abs(dY)>=10){
+      const timeOK = !lastEventTime || (now-lastEventTime)>=800;
+      const signOK = !lastEventSign || (sign!==lastEventSign && sign!=="0");
+      if(timeOK && signOK){
+        sessionCount++;
+        countNowSpan.textContent=sessionCount;
+        lastEventTime=now;
+        lastEventSign=sign;
+        mark=" ★";
+      }
+    }
 
     if(logEnabled){
-      hudBuffer.push(line);
+      hudBuffer.push(`t:${dt}s footY:${footY} dY:${dY} sign:${sign}${mark}`);
       if(hudBuffer.length>MAX_LOG) hudBuffer.shift();
-      hudLog.value = hudBuffer.join("\n");
+      hudLog.value=hudBuffer.join("\n");
     }
   }
 
-  lastFootY = footY;
-  lastTime = now;
+  lastFootY=footY;
+  lastTime=now;
+}
+
+/* ===== 日計保存 ===== */
+function saveDaily(add){
+  if(add===0) return;
+  const today = new Date().toISOString().slice(0,10);
+  let data = JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+  data[today]=(data[today]||0)+add;
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+}
+
+function showDaily(){
+  const today = new Date().toISOString().slice(0,10);
+  const data = JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+  dailyTotalDiv.textContent =
+    today+" 通算カウント："+(data[today]||0);
+}
+
+/* ===== CSV ===== */
+function exportCSV(){
+  const data = JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+  let csv="date,total_count\n";
+  Object.keys(data).sort().forEach(d=>{
+    csv+=`${d},${data[d]}\n`;
+  });
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="footstep_alt_daily.csv";
+  a.click();
 }
 
 /* ===== UI ===== */
 startBtn.onclick=()=>{running?stop():start();};
-
-hudBtn.onclick=()=>{
-  hudBox.style.display = hudBox.style.display==="none" ? "block" : "none";
-};
-
-copyBtn.onclick=()=>{
-  navigator.clipboard.writeText(hudLog.value);
-};
-
+hudBtn.onclick=()=>{hudBox.style.display=hudBox.style.display==="none"?"block":"none";};
+copyBtn.onclick=()=>navigator.clipboard.writeText(hudLog.value);
 logToggleBtn.onclick=()=>{
-  logEnabled = !logEnabled;
-  logToggleBtn.textContent = logEnabled ? "ログ停止" : "ログ再開";
+  logEnabled=!logEnabled;
+  logToggleBtn.textContent=logEnabled?"ログ停止":"ログ再開";
 };
+csvBtn.onclick=exportCSV;
+
+showDaily();
 </script>
 
 </body>
